@@ -10,13 +10,17 @@ int stav = 1;                // 1=calibrate, 2=line follow, 3=stop
 bool calibration_done = false;
 bool dekaRezim = false;      // Signál pre spustenie 2s tlačenia deky
 long casstartu = 0;
-
-// --- NASTAVENIA SLEDOVANIA ČIARY ---
-int baseSpeed = 50;
-float kp = 1.4;
-int rych_tocenia = 110;
-int tehla = 85;              // Rýchlosť otáčania pri kontrole prekážky
 int last_position = 3500;
+
+// --- Doladenie ---
+int IgnoreTime = 1; //sekundy
+int atencion = 80;
+
+// --- LineFollower ---
+int baseSpeed = 120;
+float kp = 3.5;
+int rych_tocenia = 180;
+int tehla = 100;              // Rýchlosť otáčania pri kontrole prekážky
 
 //--------------------------------------------------------------------
 // PINY
@@ -86,7 +90,7 @@ void detekcia(int a) {
   long vzdialenostT = zmerajVzdialenost();
 
   // Ak po otočení vidím prekážku -> DEKA (je široká)
-  if (vzdialenostT < 60) { 
+  if (vzdialenostT < 70) { 
     Serial.println("Je to široké -> DEKA");
     // Toč sa späť doľava, aby si sa vyrovnal na čiaru
     setMotors(-a, a); 
@@ -144,7 +148,7 @@ void loop() {
     unsigned long zaciatok = millis();
     
     // Tento cyklus pobeží presne 2 sekundy, robot stále reguluje PID
-    while (millis() - zaciatok < 2000) {
+    while (millis() - zaciatok < (IgnoreTime * 1000)) {
       uint16_t position = qtr.readLineBlack(sensorValues);
       int error = (int)position - 3500;
       int correction = error * kp / 100;
@@ -190,7 +194,7 @@ void loop() {
     long vzdialenost = zmerajVzdialenost();
     
     // Ak uvidíme prekážku tesne pred sebou (menej ako 10 cm)
-    if (vzdialenost > 0 && vzdialenost < 10) {
+    if (vzdialenost > 0 && vzdialenost < atencion) {
       detekcia(tehla); // Spustí kontrolu Tehla vs Deka
     }
 
