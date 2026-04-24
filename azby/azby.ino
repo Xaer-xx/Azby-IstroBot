@@ -8,7 +8,7 @@ VL53L1X tof;
 const uint8_t SensorCount = 8;
 uint16_t sensorValues[SensorCount] = { 0 };
 
-int stav = 1;
+int stav = 1;               // 0=wait calib, 1=calibrate, 2=line follow, 3=stop
 bool calibration_done = false;
 long casstartu = 0;
 
@@ -124,6 +124,7 @@ void setup() {
 
 void loop() {
 
+  // Obstacle check – runs every loop while line following
   if (stav == 2 && isObstacleDetected()) {
     Serial.println("PREKAZKA! Zastavujem.");
     stav = 3;
@@ -167,28 +168,29 @@ void loop() {
   } else if (stav == 2) {
     uint16_t position = qtr.readLineBlack(sensorValues);
 
-    // Detect gap (dashed line)
+    // --- Detect gap (dashed line): all sensors see no line, go straight ---
     bool allLow = true;
     for (uint8_t i = 0; i < SensorCount; i++) {
       if (sensorValues[i] > 200) { allLow = false; break; }
     }
-
     if (allLow) {
       setMotors(baseSpeed, baseSpeed);
       return;
     }
 
-    // Line lost on one side
+    // --- Line lost hard to the left, spin left ---
     if (last_position < 1000 && position == 0) {
       setMotors(rych_tocenia, -rych_tocenia);
       return;
     }
+
+    // --- Line lost hard to the right, spin right ---
     if (last_position > 6000 && position == 7000) {
       setMotors(-rych_tocenia, rych_tocenia);
       return;
     }
 
-    // P control
+    // --- P control for normal line following ---
     int error = (int)position - 3500;
     int correction = error * kp;
 
